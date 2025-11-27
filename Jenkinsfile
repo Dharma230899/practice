@@ -6,8 +6,9 @@ pipeline{
                 sh '''
                 mkdir -p build
                 touch build/com.txt
-                echo "extra extra small subnet">> build/com.txt
+                echo "extra small subnet">> build/com.txt
                 cat build/com.txt
+                //build
                 '''
             }
         }
