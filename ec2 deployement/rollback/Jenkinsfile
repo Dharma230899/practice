@@ -1,7 +1,7 @@
 pipeline{
     agent any
     environment{
-        AWS_CLI = 
+        AWS_CLI = app/user/aws
         SONAR_TOKEN = credentials(sonar-token)
         
     }
