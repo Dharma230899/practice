@@ -1,0 +1,79 @@
+pipeline{
+    agent any
+    environment{
+        AWS_CLI = 
+        SONAR_TOKEN = credentials(sonar-token)
+        
+    }
+    parameters{
+        choice(name: 'Environment', choices:['QA','SIT',';PROD'], description:'select environement')
+        string(name: 'Branch', defaultValue: 'main', description: '')
+        //sring(name: 'deployement', choice:['deploy','])
+    }
+    stages{
+        steps('checkout')
+            script{
+                sh '''
+                git branch: parms.Branch, url: '' 
+                '''
+            }
+    }
+    stages{
+        steps('Build')
+            script{
+                sh '''
+                mvn clean package -DskipTests
+                '''
+            }
+    }
+    stages{
+        steps(Test)
+            script{
+                sh '''
+                mv test -f 
+                Junitreports  surefire reports
+                '''
+            }
+    }
+    stages{
+        steps('Sonarqube Analysis'){
+            script{
+                withSonarQubeEnv('SonarQube') {
+                    sh """
+                        mvn sonar:sonar \
+                        -Dsonar.projectKey=my-project \
+                        -Dsonar.host.url=https://sonar.yourcompany.com \
+                        -Dsonar.login=${SONAR_TOKEN}
+                    """
+
+            }
+    }
+    stages{
+        steps('Artifact to S3'){
+            def WAR_FILE = target/"*".war
+            script{
+                sh '''
+                aws s3 cp $WAR_FILE s3://buck-name/webapp/my-app.war
+                '''
+            }
+    }
+    stages{
+        steps('Deploy to EC2'){
+            script{
+                def
+                if(parms.Environment == QA){
+                    HOST = ""
+                }
+                if(parms.Environment == SIT){
+                    HOST =""
+                 }
+                if(parms.Environment == PROD){
+                    HOST =""
+                  }
+                sh '''
+                scp -o StrictHostKey=no cp $WAR_FILE ec2user@$HOST: tmp/app/tomcat/
+                ssh ec2user@$HOST "systemctl tomcat restart"
+                '''
+            }
+    }
+}

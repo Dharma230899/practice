@@ -1,0 +1,75 @@
+pipeline{
+    agent any
+    environment{
+        AWS_ACCESSKEY= credentials('aws_accesskey')
+        AWS_SECRETKEY= credentials('aws_secretkey')
+        TOMCAT_USER= credntials('user')
+        TOMCAT_PASS= credentials('password')
+        SONARQUBE_TOKEN= credentials('Token')
+
+    }
+    parameters{
+        choice{name:'Environment', choice:{'QA','SIT','PROD'}, description: "select the environmet"}
+        string{name:'GIT_BRANCH', defaultValue: 'main', description: "select branch"}
+    }
+    stages{
+        stage('Checkout'){
+            steps{
+                sh '''
+                    gitbranch: parms.GIT_BRANCH, url: 'xxx'
+                    '''
+            }
+        }
+        stage('Build'){
+            steps{
+                sh '''
+                    mvn clean package -Dskiptests
+                    '''
+            }
+        }
+        stage('Test'){
+            steps{
+                sh '''
+                    mvn test -f catia/pom.xml
+                    '''
+            }
+        }
+        stage('code quality'){
+            steps{
+                sh '''
+                    withSonarQubeEnv('sonarqube-server')
+                    mvn sonar:sonar \
+                    -Dsonar projectKey = xx
+                    -Dsonar login = $TOKEN
+                    -dsonar.host.url = 
+                    '''
+            }
+        }
+        stage('Artifact deployed S3'){
+            steps{
+                WAR_FILE = 'target/catia.war'
+                sh '''
+                    aws s3 cp WAR_FILE s3://bucket/webapp-${buildnumber}.war
+                    '''
+            }
+        }
+        stage('Deploy in EC2'){
+            steps{
+                if (Environmet == 'QA'){
+                        HOST    =   'qa-server'
+                }
+                if (Environmet == 'SIT'){
+                        HOST = 'sit-server'
+                }
+                if (Environmet == 'PROD'){
+                        HOST = 'prod-server'
+                }
+                sh '''
+                    scp -o SricthostkeyCheckig = no target/catia.war ec2-user@$HOST: /tomcat/webapps
+                    ssh ec2user@$HOST "systemctl restart tomcat"
+                   '''
+            }
+        }
+    }
+
+}
