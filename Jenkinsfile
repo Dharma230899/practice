@@ -8,6 +8,7 @@ pipeline{
                 touch build/com.txt
                 echo "extra small subnet">> build/com.txt
                 cat build/com.txt
+                //build
                 '''
             }
         }
